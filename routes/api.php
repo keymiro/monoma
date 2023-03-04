@@ -1,7 +1,8 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\LeadController;
 
 /*
 |--------------------------------------------------------------------------
@@ -14,6 +15,11 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::post('/auth', [AuthController::class,'login'])->name('auth');
+Route::post('/logout',[AuthController::class,'logout'])->name('logout');
+
+Route::group(['middleware' => 'jwt.auth'], function() {
+    Route::get('/lead/{id}', [LeadController::class,'show'])->name('leads.show');
+    Route::post('/lead', [LeadController::class,'store'])->name('leads.store');
+    Route::get('/leads', [LeadController::class,'index'])->name('leads.index');
 });

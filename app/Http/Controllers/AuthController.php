@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use App\Http\Requests\LoginRequest;
-use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
 
@@ -52,6 +51,12 @@ class AuthController extends Controller
         $token = JWTAuth::getToken();
         JWTAuth::invalidate($token);
 
-        return response()->json(['message' => 'Haz salido correctamente']);
+        return response()->json([
+            'meta' => [
+                'success' => true,
+                'errors' => []
+            ],
+            'message' => 'Haz salido correctamente'
+        ], 200);
     }
 }

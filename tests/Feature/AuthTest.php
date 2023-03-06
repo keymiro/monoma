@@ -4,80 +4,82 @@ namespace Tests\Unit;
 
 use Tests\TestCase;
 use App\Models\User;
-use Illuminate\Http\JsonResponse;
+use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class AuthTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
     use WithFaker;
 
     /**
-     * Test successful login
+     * Test successful login.
      *
      * @return void
      */
     public function testLoginSuccess(): void
     {
-        // create a user to login
+        // Create a user to login
+        $password = $this->faker->password;
         $user = User::factory()->create([
-            'password' => bcrypt($password = $this->faker->password)
+            'password' => bcrypt($password)
         ]);
 
-        // send login request with valid credentials
+        // Send login request with valid credentials
         $response = $this->postJson(route('auth'), [
             'username' => $user->username,
             'password' => $password
         ]);
 
-        // assert response
+        // Assert response
         $response->assertSuccessful();
         $response->assertJsonStructure([
             'meta' => ['success', 'errors'],
             'data' => ['token', 'minutes_to_expire']
         ]);
         $response->assertJson(['meta' => ['success' => true, 'errors' => []]]);
+
+        // Assert the token is valid
+        $token = $response->json('data.token');
+        $this->assertTrue(JWTAuth::setToken($token)->check());
     }
 
     /**
-     * Test invalid credentials login
+     * Test invalid credentials login.
      *
      * @return void
      */
     public function testLoginInvalidCredentials(): void
     {
-        // create a user to login
         $user = User::factory()->create();
 
-        // send login request with invalid credentials
         $response = $this->postJson(route('auth'), [
             'username' => $user->username,
             'password' => $this->faker->password
         ]);
 
-        // assert response
-        $response->assertStatus(JsonResponse::HTTP_UNAUTHORIZED);
+        $response->assertStatus(401);
         $response->assertJsonStructure(['meta' => ['success', 'errors']]);
         $response->assertJson(['meta' => ['success' => false, 'errors' => ['Credenciales invalidas']]]);
     }
 
     /**
-     * Test logout
+     * Test successful logout.
      *
      * @return void
      */
-    public function testLogout(): void
+    public function testLogoutSuccess(): void
     {
-        // create a user and authenticate
         $user = User::factory()->create();
-        $this->actingAs($user);
 
-        // send logout request
+        $token = JWTAuth::fromUser($user);
+        JWTAuth::setToken($token);
+
         $response = $this->postJson(route('logout'));
 
-        // assert response
-        $response->assertSuccessful();
-        $response->assertJson(['message' => 'Haz salido correctamente']);
+        $response->assertStatus(200);
+        $this->assertEquals('Haz salido correctamente', $response->json('message'));
     }
+
 }
